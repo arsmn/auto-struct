@@ -18,11 +18,14 @@ type Age struct {
 }
 
 type Example struct {
-	Foo  **bool `default:"true"`
-	Bar  string `default:"33"`
-	Qux  int8   `default:"33"`
-	Name *Name  `default:"nested"`
-	Age  **Age  `default:"nested"`
+	Foo  **bool      `default:"true"`
+	Bar  string      `default:"33"`
+	Qux  int8        `default:"33"`
+	Name *Name       `default:"nested"`
+	Age  **Age       `default:"nested"`
+	Arr  [5]string   `default:"[\"1\", \"2\", \"3\", \"4\"]"`
+	Arr2 [2][]string `default:"[[\"1\", \"2\", \"3\", \"4\"], [\"5\", \"6\", \"7\", \"8\"]]"`
+	Arr3 [3]*Name    `default:"nested"`
 }
 
 func Test_New(t *testing.T) {
@@ -60,6 +63,25 @@ func Test_New(t *testing.T) {
 				LN: ln1,
 			},
 			Age: &age,
+			Arr: [5]string{"1", "2", "3", "4", ""},
+			Arr2: [2][]string{
+				{"1", "2", "3", "4"},
+				{"5", "6", "7", "8"},
+			},
+			Arr3: [3]*Name{
+				{
+					FN: &fn1,
+					LN: ln1,
+				},
+				{
+					FN: &fn1,
+					LN: ln1,
+				},
+				{
+					FN: &fn1,
+					LN: ln1,
+				},
+			},
 		}
 
 		assert.Equal(t, &exp, act)
