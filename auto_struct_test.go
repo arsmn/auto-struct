@@ -23,9 +23,10 @@ type Example struct {
 	Qux  int8        `default:"33"`
 	Name *Name       `default:"nested"`
 	Age  **Age       `default:"nested"`
-	Arr  [5]string   `default:"[\"1\", \"2\", \"3\", \"4\"]"`
-	Arr2 [2][]string `default:"[[\"1\", \"2\", \"3\", \"4\"], [\"5\", \"6\", \"7\", \"8\"]]"`
+	Arr  [5]string   `default:"json:[\"1\", \"2\", \"3\", \"4\"]"`
+	Arr2 [2][]string `default:"json:[[\"1\", \"2\", \"3\", \"4\"], [\"5\", \"6\", \"7\", \"8\"]]"`
 	Arr3 [3]*Name    `default:"nested"`
+	Arr4 [4]int      `default:"repeat:1"`
 }
 
 func Test_New(t *testing.T) {
@@ -82,6 +83,7 @@ func Test_New(t *testing.T) {
 					LN: ln1,
 				},
 			},
+			Arr4: [4]int{1, 1, 1, 1},
 		}
 
 		assert.Equal(t, &exp, act)

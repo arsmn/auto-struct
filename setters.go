@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 )
 
 type setterFunc func(*config, reflect.Value, string) error
@@ -238,14 +239,28 @@ func arraySetter(cfg *config, v reflect.Value, tag string) error {
 		return nil
 	}
 
-	arr := reflect.New(reflect.ArrayOf(v.Len(), v.Type().Elem())).Elem()
+	if strings.HasPrefix(tag, "json:") {
+		arr := reflect.New(reflect.ArrayOf(v.Len(), v.Type().Elem())).Elem()
 
-	if err := json.Unmarshal([]byte(tag), arr.Addr().Interface()); err != nil {
-		return err
+		if err := json.Unmarshal([]byte(strings.TrimPrefix(tag, "json:")), arr.Addr().Interface()); err != nil {
+			return err
+		}
+
+		for i := 0; i < arr.Len(); i++ {
+			v.Index(i).Set(arr.Index(i))
+		}
 	}
 
-	for i := 0; i < arr.Len(); i++ {
-		v.Index(i).Set(arr.Index(i))
+	if strings.HasPrefix(tag, "repeat:") {
+		rv := reflect.New(v.Type().Elem()).Elem()
+
+		if err := valueSetter(cfg, rv, strings.TrimPrefix(tag, "repeat:")); err != nil {
+			return err
+		}
+
+		for i := 0; i < v.Len(); i++ {
+			v.Index(i).Set(rv)
+		}
 	}
 
 	return nil
