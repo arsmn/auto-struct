@@ -18,15 +18,19 @@ type Age struct {
 }
 
 type Example struct {
-	Foo  **bool      `default:"true"`
-	Bar  string      `default:"33"`
-	Qux  int8        `default:"33"`
-	Name *Name       `default:"nested"`
-	Age  **Age       `default:"nested"`
-	Arr1 [5]string   `default:"json:[\"1\", \"2\", \"3\", \"4\"]"`
-	Arr2 [2][]string `default:"json:[[\"1\", \"2\", \"3\", \"4\"], [\"5\", \"6\", \"7\", \"8\"]]"`
-	Arr3 [3]*Name    `default:"nested"`
-	Arr4 [4]int      `default:"repeat:1"`
+	Foo    **bool      `default:"true"`
+	Bar    string      `default:"33"`
+	Qux    int8        `default:"33"`
+	Name   *Name       `default:"nested"`
+	Age    **Age       `default:"nested"`
+	Arr1   [5]string   `default:"json:[\"1\", \"2\", \"3\", \"4\"]"`
+	Arr2   [2][]string `default:"json:[[\"1\", \"2\", \"3\", \"4\"], [\"5\", \"6\", \"7\", \"8\"]]"`
+	Arr3   [3]*Name    `default:"nested"`
+	Arr4   [4]int      `default:"repeat:1"`
+	Slice1 []string    `default:"repeat(5,10):1"`
+	Slice2 []string    `default:"json:[\"1\", \"2\", \"3\", \"4\", \"5\"]"`
+	Slice3 []*Name     `default:"nested(1)"`
+	Slice4 [][2]string `default:"json:[[\"1\", \"2\"], [\"3\", \"4\"]]"`
 }
 
 func Test_New(t *testing.T) {
@@ -83,7 +87,19 @@ func Test_New(t *testing.T) {
 					LN: ln1,
 				},
 			},
-			Arr4: [4]int{1, 1, 1, 1},
+			Arr4:   [4]int{1, 1, 1, 1},
+			Slice1: []string{"1", "1", "1", "1", "1"},
+			Slice2: []string{"1", "2", "3", "4", "5"},
+			Slice3: []*Name{
+				{
+					FN: &fn1,
+					LN: ln1,
+				},
+			},
+			Slice4: [][2]string{
+				{"1", "2"},
+				{"3", "4"},
+			},
 		}
 
 		assert.Equal(t, &exp, act)

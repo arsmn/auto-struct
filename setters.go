@@ -51,6 +51,8 @@ func getSetterFunc(k reflect.Kind) setterFunc {
 		return pointerSetter
 	case reflect.Array:
 		return arraySetter
+	case reflect.Slice:
+		return sliceSetter
 	default:
 		return nil
 	}
@@ -228,35 +230,67 @@ func arraySetter(cfg *config, v reflect.Value, tag string) error {
 
 	t := extractTag(tag)
 
-	if t.isNested() {
-		rv := reflect.New(v.Type().Elem()).Elem()
+	if t.isJSON() {
+		return json.Unmarshal([]byte(t.val), v.Addr().Interface())
+	}
 
+	rv := reflect.New(v.Type().Elem()).Elem()
+
+	switch {
+	case t.isNested():
 		if err := structFieldsSetter(cfg, rv); err != nil {
 			return err
 		}
-
-		for i := 0; i < v.Len(); i++ {
-			v.Index(i).Set(rv)
+	case t.isRepeat():
+		if err := valueSetter(cfg, rv, t.val); err != nil {
+			return err
 		}
-
+	default:
 		return nil
 	}
+
+	for i := 0; i < v.Len(); i++ {
+		v.Index(i).Set(rv)
+	}
+
+	return nil
+}
+
+func sliceSetter(cfg *config, v reflect.Value, tag string) error {
+	if v.Kind() != reflect.Slice {
+		return fmt.Errorf("SliceSetter does not support [%s]", v.Kind())
+	}
+
+	t := extractTag(tag)
 
 	if t.isJSON() {
 		return json.Unmarshal([]byte(t.val), v.Addr().Interface())
 	}
 
-	if t.isRepeat() {
+	s := reflect.MakeSlice(reflect.SliceOf(v.Type().Elem()), t.len, t.cap)
+
+	if t.len > 0 {
 		rv := reflect.New(v.Type().Elem()).Elem()
 
-		if err := valueSetter(cfg, rv, t.val); err != nil {
-			return err
+		switch {
+		case t.isNested():
+			if err := structFieldsSetter(cfg, rv); err != nil {
+				return err
+			}
+		case t.isRepeat():
+			if err := valueSetter(cfg, rv, t.val); err != nil {
+				return err
+			}
+		default:
+			return nil
 		}
 
-		for i := 0; i < v.Len(); i++ {
-			v.Index(i).Set(rv)
+		for i := 0; i < s.Len(); i++ {
+			s.Index(i).Set(rv)
 		}
 	}
+
+	v.Set(s)
 
 	return nil
 }
@@ -329,7 +363,9 @@ func (t tag) isRepeat() bool {
 func extractTag(t string) tag {
 	cmd, val := splitOn(t, ":")
 	matches := rx.FindStringSubmatch(cmd)
-	var numbers [2]int
+
+	var len, cap int
+
 	for i, match := range matches[2:] {
 		if i > 1 {
 			break
@@ -338,16 +374,25 @@ func extractTag(t string) tag {
 		if match != "" {
 			num, err := strconv.Atoi(match)
 			if err == nil {
-				numbers[i] = num
+				switch i {
+				case 0:
+					len = num
+				case 1:
+					cap = num
+				}
 			}
 		}
 	}
 
+	if cap < len {
+		cap = len
+	}
+
 	return tag{
-		cmd: strings.ToLower(cmd),
+		cmd: strings.ToLower(matches[1]),
 		val: val,
-		len: numbers[0],
-		cap: numbers[1],
+		len: len,
+		cap: cap,
 	}
 }
 
