@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -225,7 +226,9 @@ func arraySetter(cfg *config, v reflect.Value, tag string) error {
 		return fmt.Errorf("ArraySetter does not support [%s]", v.Kind())
 	}
 
-	if tag == "nested" {
+	t := extractTag(tag)
+
+	if t.isNested() {
 		rv := reflect.New(v.Type().Elem()).Elem()
 
 		if err := structFieldsSetter(cfg, rv); err != nil {
@@ -239,22 +242,14 @@ func arraySetter(cfg *config, v reflect.Value, tag string) error {
 		return nil
 	}
 
-	if strings.HasPrefix(tag, "json:") {
-		arr := reflect.New(reflect.ArrayOf(v.Len(), v.Type().Elem())).Elem()
-
-		if err := json.Unmarshal([]byte(strings.TrimPrefix(tag, "json:")), arr.Addr().Interface()); err != nil {
-			return err
-		}
-
-		for i := 0; i < arr.Len(); i++ {
-			v.Index(i).Set(arr.Index(i))
-		}
+	if t.isJSON() {
+		return json.Unmarshal([]byte(t.val), v.Addr().Interface())
 	}
 
-	if strings.HasPrefix(tag, "repeat:") {
+	if t.isRepeat() {
 		rv := reflect.New(v.Type().Elem()).Elem()
 
-		if err := valueSetter(cfg, rv, strings.TrimPrefix(tag, "repeat:")); err != nil {
+		if err := valueSetter(cfg, rv, t.val); err != nil {
 			return err
 		}
 
@@ -310,4 +305,56 @@ func dereference(rv reflect.Value) reflect.Value {
 	}
 
 	return rv
+}
+
+var rx = regexp.MustCompile(`^([a-zA-Z]+)(?:\((\d+)?,?\s*(\d+)?\))?$`)
+
+type tag struct {
+	cmd, val string
+	len, cap int
+}
+
+func (t tag) isJSON() bool {
+	return t.cmd == "json"
+}
+
+func (t tag) isNested() bool {
+	return t.cmd == "nested"
+}
+
+func (t tag) isRepeat() bool {
+	return t.cmd == "repeat"
+}
+
+func extractTag(t string) tag {
+	cmd, val := splitOn(t, ":")
+	matches := rx.FindStringSubmatch(cmd)
+	var numbers [2]int
+	for i, match := range matches[2:] {
+		if i > 1 {
+			break
+		}
+
+		if match != "" {
+			num, err := strconv.Atoi(match)
+			if err == nil {
+				numbers[i] = num
+			}
+		}
+	}
+
+	return tag{
+		cmd: strings.ToLower(cmd),
+		val: val,
+		len: numbers[0],
+		cap: numbers[1],
+	}
+}
+
+func splitOn(input, delimiter string) (string, string) {
+	index := strings.Index(input, delimiter)
+	if index == -1 {
+		return input, ""
+	}
+	return input[:index], input[index+len(delimiter):]
 }

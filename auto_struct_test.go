@@ -23,7 +23,7 @@ type Example struct {
 	Qux  int8        `default:"33"`
 	Name *Name       `default:"nested"`
 	Age  **Age       `default:"nested"`
-	Arr  [5]string   `default:"json:[\"1\", \"2\", \"3\", \"4\"]"`
+	Arr1 [5]string   `default:"json:[\"1\", \"2\", \"3\", \"4\"]"`
 	Arr2 [2][]string `default:"json:[[\"1\", \"2\", \"3\", \"4\"], [\"5\", \"6\", \"7\", \"8\"]]"`
 	Arr3 [3]*Name    `default:"nested"`
 	Arr4 [4]int      `default:"repeat:1"`
@@ -63,8 +63,8 @@ func Test_New(t *testing.T) {
 				FN: &fn1,
 				LN: ln1,
 			},
-			Age: &age,
-			Arr: [5]string{"1", "2", "3", "4", ""},
+			Age:  &age,
+			Arr1: [5]string{"1", "2", "3", "4", ""},
 			Arr2: [2][]string{
 				{"1", "2", "3", "4"},
 				{"5", "6", "7", "8"},
