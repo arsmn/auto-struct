@@ -53,6 +53,8 @@ func getSetterFunc(k reflect.Kind) setterFunc {
 		return arraySetter
 	case reflect.Slice:
 		return sliceSetter
+	case reflect.Map:
+		return mapSetter
 	default:
 		return nil
 	}
@@ -216,10 +218,6 @@ func structSetter(cfg *config, v reflect.Value, tag string) error {
 		return fmt.Errorf("StructSetter does not support [%s]", v.Kind())
 	}
 
-	if tag != "nested" {
-		return nil
-	}
-
 	return structFieldsSetter(cfg, v)
 }
 
@@ -228,25 +226,27 @@ func arraySetter(cfg *config, v reflect.Value, tag string) error {
 		return fmt.Errorf("ArraySetter does not support [%s]", v.Kind())
 	}
 
-	t := extractTag(tag)
+	cmd, err := extractCmd(tag)
+	if err != nil {
+		return err
+	}
 
-	if t.isJSON() {
-		return json.Unmarshal([]byte(t.val), v.Addr().Interface())
+	if cmd.isCMDJSON() {
+		return json.Unmarshal([]byte(cmd.val), v.Addr().Interface())
 	}
 
 	rv := reflect.New(v.Type().Elem()).Elem()
 
-	switch {
-	case t.isNested():
-		if err := structFieldsSetter(cfg, rv); err != nil {
-			return err
+	if cmd.isCMDRepeat() {
+		if cmd.isValStruct() {
+			if err := structFieldsSetter(cfg, rv); err != nil {
+				return err
+			}
+		} else {
+			if err := valueSetter(cfg, rv, cmd.val); err != nil {
+				return err
+			}
 		}
-	case t.isRepeat():
-		if err := valueSetter(cfg, rv, t.val); err != nil {
-			return err
-		}
-	default:
-		return nil
 	}
 
 	for i := 0; i < v.Len(); i++ {
@@ -261,28 +261,30 @@ func sliceSetter(cfg *config, v reflect.Value, tag string) error {
 		return fmt.Errorf("SliceSetter does not support [%s]", v.Kind())
 	}
 
-	t := extractTag(tag)
-
-	if t.isJSON() {
-		return json.Unmarshal([]byte(t.val), v.Addr().Interface())
+	cmd, err := extractCmd(tag)
+	if err != nil {
+		return err
 	}
 
-	s := reflect.MakeSlice(reflect.SliceOf(v.Type().Elem()), t.len, t.cap)
+	if cmd.isCMDJSON() {
+		return json.Unmarshal([]byte(cmd.val), v.Addr().Interface())
+	}
 
-	if t.len > 0 {
+	s := reflect.MakeSlice(reflect.SliceOf(v.Type().Elem()), cmd.len, cmd.cap)
+
+	if cmd.len > 0 {
 		rv := reflect.New(v.Type().Elem()).Elem()
 
-		switch {
-		case t.isNested():
-			if err := structFieldsSetter(cfg, rv); err != nil {
-				return err
+		if cmd.isCMDRepeat() {
+			if cmd.isValStruct() {
+				if err := structFieldsSetter(cfg, rv); err != nil {
+					return err
+				}
+			} else {
+				if err := valueSetter(cfg, rv, cmd.val); err != nil {
+					return err
+				}
 			}
-		case t.isRepeat():
-			if err := valueSetter(cfg, rv, t.val); err != nil {
-				return err
-			}
-		default:
-			return nil
 		}
 
 		for i := 0; i < s.Len(); i++ {
@@ -291,6 +293,23 @@ func sliceSetter(cfg *config, v reflect.Value, tag string) error {
 	}
 
 	v.Set(s)
+
+	return nil
+}
+
+func mapSetter(cfg *config, v reflect.Value, tag string) error {
+	if v.Kind() != reflect.Map {
+		return fmt.Errorf("MapSetter does not support [%s]", v.Kind())
+	}
+
+	cmd, err := extractCmd(tag)
+	if err != nil {
+		return err
+	}
+
+	if cmd.isCMDJSON() {
+		return json.Unmarshal([]byte(cmd.val), v.Addr().Interface())
+	}
 
 	return nil
 }
@@ -341,65 +360,55 @@ func dereference(rv reflect.Value) reflect.Value {
 	return rv
 }
 
-var rx = regexp.MustCompile(`^([a-zA-Z]+)(?:\((\d+)?,?\s*(\d+)?\))?$`)
+var rx = regexp.MustCompile(`(\w+)(?:\(([^)]*)\))?`)
 
-type tag struct {
+type command struct {
 	cmd, val string
 	len, cap int
+	commands map[string]string
 }
 
-func (t tag) isJSON() bool {
-	return t.cmd == "json"
+func (c command) isCMDJSON() bool {
+	return strings.EqualFold(c.cmd, "json")
 }
 
-func (t tag) isNested() bool {
-	return t.cmd == "nested"
+func (c command) isCMDRepeat() bool {
+	return strings.EqualFold(c.cmd, "repeat")
 }
 
-func (t tag) isRepeat() bool {
-	return t.cmd == "repeat"
+func (c command) isValStruct() bool {
+	return strings.EqualFold(c.cmd, "struct")
 }
 
-func extractTag(t string) tag {
-	cmd, val := splitOn(t, ":")
-	matches := rx.FindStringSubmatch(cmd)
+func extractCmd(t string) (command, error) {
+	c := command{
+		commands: make(map[string]string),
+	}
 
-	var len, cap int
-
-	for i, match := range matches[2:] {
-		if i > 1 {
-			break
-		}
-
-		if match != "" {
-			num, err := strconv.Atoi(match)
-			if err == nil {
-				switch i {
-				case 0:
-					len = num
-				case 1:
-					cap = num
+	for _, match := range rx.FindAllStringSubmatch(t, -1) {
+		if len(match) == 3 {
+			switch match[1] {
+			case "struct", "json", "repeat":
+				if c.cmd != "" {
+					return command{}, fmt.Errorf("more than one main command is detected")
 				}
+
+				c.cmd, c.val = match[1], match[2]
+			case "len":
+				l, _ := strconv.Atoi(match[2])
+				c.len = l
+			case "cap":
+				l, _ := strconv.Atoi(match[2])
+				c.cap = l
 			}
+
+			c.commands[match[1]] = match[2]
 		}
 	}
 
-	if cap < len {
-		cap = len
+	if c.cap < c.len {
+		c.cap = c.len
 	}
 
-	return tag{
-		cmd: strings.ToLower(matches[1]),
-		val: val,
-		len: len,
-		cap: cap,
-	}
-}
-
-func splitOn(input, delimiter string) (string, string) {
-	index := strings.Index(input, delimiter)
-	if index == -1 {
-		return input, ""
-	}
-	return input[:index], input[index+len(delimiter):]
+	return c, nil
 }

@@ -3,7 +3,7 @@ package autostruct
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/google/go-cmp/cmp"
 )
 
 type Name struct {
@@ -18,19 +18,20 @@ type Age struct {
 }
 
 type Example struct {
-	Foo    **bool      `default:"true"`
-	Bar    string      `default:"33"`
-	Qux    int8        `default:"33"`
-	Name   *Name       `default:"nested"`
-	Age    **Age       `default:"nested"`
-	Arr1   [5]string   `default:"json:[\"1\", \"2\", \"3\", \"4\"]"`
-	Arr2   [2][]string `default:"json:[[\"1\", \"2\", \"3\", \"4\"], [\"5\", \"6\", \"7\", \"8\"]]"`
-	Arr3   [3]*Name    `default:"nested"`
-	Arr4   [4]int      `default:"repeat:1"`
-	Slice1 []string    `default:"repeat(5,10):1"`
-	Slice2 []string    `default:"json:[\"1\", \"2\", \"3\", \"4\", \"5\"]"`
-	Slice3 []*Name     `default:"nested(1)"`
-	Slice4 [][2]string `default:"json:[[\"1\", \"2\"], [\"3\", \"4\"]]"`
+	Foo    **bool         `default:"true"`
+	Bar    string         `default:"bar"`
+	Qux    int8           `default:"123"`
+	Name   *Name          `default:"struct"`
+	Age    **Age          `default:"struct"`
+	Arr1   [5]string      `default:"json([\"1\", \"2\", \"3\", \"4\"])"`
+	Arr2   [2][]string    `default:"json([[\"1\", \"2\", \"3\", \"4\"], [\"5\", \"6\", \"7\", \"8\"]])"`
+	Arr3   [3]*Name       `default:"repeat(struct)"`
+	Arr4   [4]int         `default:"repeat(1)"`
+	Slice1 []string       `default:"len(5),cap(10),repeat(1)"`
+	Slice2 []string       `default:"json([\"1\", \"2\", \"3\", \"4\", \"5\"])"`
+	Slice3 []*Name        `default:"len(1),repeat(struct)"`
+	Slice4 [][2]string    `default:"json([[\"1\", \"2\"], [\"3\", \"4\"]])"`
+	Map1   map[string]int `default:"json({\"1\": 1})"`
 }
 
 func Test_New(t *testing.T) {
@@ -61,8 +62,8 @@ func Test_New(t *testing.T) {
 
 		exp := &Example{
 			Foo: &foo1,
-			Bar: "33",
-			Qux: 33,
+			Bar: "bar",
+			Qux: 123,
 			Name: &Name{
 				FN: &fn1,
 				LN: ln1,
@@ -100,8 +101,13 @@ func Test_New(t *testing.T) {
 				{"1", "2"},
 				{"3", "4"},
 			},
+			Map1: map[string]int{
+				"1": 1,
+			},
 		}
 
-		assert.Equal(t, &exp, act)
+		if !cmp.Equal(&exp, act) {
+			t.Error(cmp.Diff(&exp, act))
+		}
 	})
 }
