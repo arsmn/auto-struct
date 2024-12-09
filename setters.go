@@ -4,15 +4,46 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
-	"regexp"
 	"strconv"
-	"strings"
+	"time"
 )
 
 type setterFunc func(*config, reflect.Value, string) error
 
-func getSetterFunc(k reflect.Kind) setterFunc {
-	switch k {
+var (
+	timeType     = reflect.TypeOf(time.Time{})
+	durationType = reflect.TypeOf(time.Duration(0))
+	timeFormats  = map[string]string{
+		"ANSIC":       time.ANSIC,
+		"UnixDate":    time.UnixDate,
+		"RubyDate":    time.RubyDate,
+		"RFC822":      time.RFC822,
+		"RFC822Z":     time.RFC822Z,
+		"RFC850":      time.RFC850,
+		"RFC1123":     time.RFC1123,
+		"RFC1123Z":    time.RFC1123Z,
+		"RFC3339":     time.RFC3339,
+		"RFC3339Nano": time.RFC3339Nano,
+		"Kitchen":     time.Kitchen,
+		"Stamp":       time.Stamp,
+		"StampMilli":  time.StampMilli,
+		"StampMicro":  time.StampMicro,
+		"StampNano":   time.StampNano,
+		"DateTime":    time.DateTime,
+		"DateOnly":    time.DateOnly,
+		"TimeOnly":    time.TimeOnly,
+	}
+)
+
+func getSetterFunc(v reflect.Value) setterFunc {
+	switch v.Type() {
+	case durationType:
+		return durationSetter
+	case timeType:
+		return timeSetter
+	}
+
+	switch v.Kind() {
 	case reflect.Bool:
 		return boolSetter
 	case reflect.String:
@@ -218,7 +249,16 @@ func structSetter(cfg *config, v reflect.Value, tag string) error {
 		return fmt.Errorf("StructSetter does not support [%s]", v.Kind())
 	}
 
-	return structFieldsSetter(cfg, v)
+	cmd, err := parseTag(tag)
+	if err != nil {
+		return err
+	}
+
+	if cmd.isValStruct() {
+		return structFieldsSetter(cfg, v)
+	}
+
+	return nil
 }
 
 func arraySetter(cfg *config, v reflect.Value, tag string) error {
@@ -226,18 +266,18 @@ func arraySetter(cfg *config, v reflect.Value, tag string) error {
 		return fmt.Errorf("ArraySetter does not support [%s]", v.Kind())
 	}
 
-	cmd, err := extractCmd(tag)
+	cmd, err := parseTag(tag)
 	if err != nil {
 		return err
 	}
 
-	if cmd.isCMDJSON() {
+	if cmd.isJSON() {
 		return json.Unmarshal([]byte(cmd.val), v.Addr().Interface())
 	}
 
 	rv := reflect.New(v.Type().Elem()).Elem()
 
-	if cmd.isCMDRepeat() {
+	if cmd.isRepeat() {
 		if cmd.isValStruct() {
 			if err := structFieldsSetter(cfg, rv); err != nil {
 				return err
@@ -261,12 +301,12 @@ func sliceSetter(cfg *config, v reflect.Value, tag string) error {
 		return fmt.Errorf("SliceSetter does not support [%s]", v.Kind())
 	}
 
-	cmd, err := extractCmd(tag)
+	cmd, err := parseTag(tag)
 	if err != nil {
 		return err
 	}
 
-	if cmd.isCMDJSON() {
+	if cmd.isJSON() {
 		return json.Unmarshal([]byte(cmd.val), v.Addr().Interface())
 	}
 
@@ -275,7 +315,7 @@ func sliceSetter(cfg *config, v reflect.Value, tag string) error {
 	if cmd.len > 0 {
 		rv := reflect.New(v.Type().Elem()).Elem()
 
-		if cmd.isCMDRepeat() {
+		if cmd.isRepeat() {
 			if cmd.isValStruct() {
 				if err := structFieldsSetter(cfg, rv); err != nil {
 					return err
@@ -302,16 +342,63 @@ func mapSetter(cfg *config, v reflect.Value, tag string) error {
 		return fmt.Errorf("MapSetter does not support [%s]", v.Kind())
 	}
 
-	cmd, err := extractCmd(tag)
+	cmd, err := parseTag(tag)
 	if err != nil {
 		return err
 	}
 
-	if cmd.isCMDJSON() {
+	if cmd.isJSON() {
 		return json.Unmarshal([]byte(cmd.val), v.Addr().Interface())
 	}
 
 	return nil
+}
+
+func durationSetter(_ *config, v reflect.Value, tag string) error {
+	if v.Type() != durationType {
+		return fmt.Errorf("DurationSetter does not support [%s]", v.Kind())
+	}
+
+	dur, err := time.ParseDuration(tag)
+	if err != nil {
+		return err
+	}
+
+	v.Set(reflect.ValueOf(dur))
+
+	return nil
+}
+
+func timeSetter(_ *config, v reflect.Value, tag string) error {
+	if v.Type() != timeType {
+		return fmt.Errorf("TimeSetter does not support [%s]", v.Kind())
+	}
+
+	cmd, err := parseTag(tag)
+	if err != nil {
+		return err
+	}
+
+	t, err := time.Parse(parseTimeLayout(cmd.layout), cmd.val)
+	if err != nil {
+		return err
+	}
+
+	v.Set(reflect.ValueOf(t))
+
+	return nil
+}
+
+func parseTimeLayout(layout string) string {
+	if layout == "" {
+		return time.RFC3339
+	}
+
+	if format, found := timeFormats[layout]; found {
+		return format
+	}
+
+	return layout
 }
 
 func structFieldsSetter(cfg *config, v reflect.Value) error {
@@ -341,7 +428,7 @@ func valueSetter(cfg *config, v reflect.Value, tag string) error {
 		return fmt.Errorf("[%s] is not exported", v)
 	}
 
-	fn := getSetterFunc(v.Kind())
+	fn := getSetterFunc(v)
 	if fn == nil {
 		return fmt.Errorf("[%s] type is not supported", v.Kind())
 	}
@@ -358,57 +445,4 @@ func dereference(rv reflect.Value) reflect.Value {
 	}
 
 	return rv
-}
-
-var rx = regexp.MustCompile(`(\w+)(?:\(([^)]*)\))?`)
-
-type command struct {
-	cmd, val string
-	len, cap int
-	commands map[string]string
-}
-
-func (c command) isCMDJSON() bool {
-	return strings.EqualFold(c.cmd, "json")
-}
-
-func (c command) isCMDRepeat() bool {
-	return strings.EqualFold(c.cmd, "repeat")
-}
-
-func (c command) isValStruct() bool {
-	return strings.EqualFold(c.cmd, "struct")
-}
-
-func extractCmd(t string) (command, error) {
-	c := command{
-		commands: make(map[string]string),
-	}
-
-	for _, match := range rx.FindAllStringSubmatch(t, -1) {
-		if len(match) == 3 {
-			switch match[1] {
-			case "struct", "json", "repeat":
-				if c.cmd != "" {
-					return command{}, fmt.Errorf("more than one main command is detected")
-				}
-
-				c.cmd, c.val = match[1], match[2]
-			case "len":
-				l, _ := strconv.Atoi(match[2])
-				c.len = l
-			case "cap":
-				l, _ := strconv.Atoi(match[2])
-				c.cap = l
-			}
-
-			c.commands[match[1]] = match[2]
-		}
-	}
-
-	if c.cap < c.len {
-		c.cap = c.len
-	}
-
-	return c, nil
 }
