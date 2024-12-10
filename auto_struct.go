@@ -2,7 +2,7 @@ package autostruct
 
 import "reflect"
 
-const defaultTag = "default"
+const defaultTag = "auto"
 
 type option func(*config)
 

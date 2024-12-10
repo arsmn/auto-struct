@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -350,6 +351,51 @@ func mapSetter(cfg *config, v reflect.Value, tag string) error {
 	if cmd.isJSON() {
 		return json.Unmarshal([]byte(cmd.val), v.Addr().Interface())
 	}
+
+	var (
+		keyType = v.Type().Key()
+		valType = v.Type().Elem()
+		mapVal  = reflect.MakeMapWithSize(reflect.MapOf(keyType, valType), cmd.len)
+	)
+
+	pairs := strings.Split(cmd.val, ",")
+	for _, pair := range pairs {
+		kv := strings.Split(strings.TrimSpace(pair), ":")
+		if len(kv) != 2 {
+			continue
+		}
+
+		var (
+			keyStr = strings.TrimSpace(kv[0])
+			valStr = strings.TrimSpace(kv[1])
+		)
+
+		key := reflect.New(keyType).Elem()
+		if valStr == "struct" {
+			if err := structFieldsSetter(cfg, key); err != nil {
+				return err
+			}
+		} else {
+			if err := valueSetter(cfg, key, keyStr); err != nil {
+				return err
+			}
+		}
+
+		val := reflect.New(valType).Elem()
+		if valStr == "struct" {
+			if err := structFieldsSetter(cfg, val); err != nil {
+				return err
+			}
+		} else {
+			if err := valueSetter(cfg, val, valStr); err != nil {
+				return err
+			}
+		}
+
+		mapVal.SetMapIndex(key, val)
+	}
+
+	v.Set(mapVal)
 
 	return nil
 }
