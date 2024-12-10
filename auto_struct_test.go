@@ -8,35 +8,36 @@ import (
 )
 
 type Name struct {
-	FN **string `default:"FN"`
-	LN *string  `default:"LN"`
+	FN **string `auto:"FN"`
+	LN *string  `auto:"LN"`
 }
 
 type Age struct {
-	Day   *uint8    `default:"10"`
-	Month **int64   `default:"20"`
-	Year  ***uint16 `default:"3030"`
+	Day   *uint8    `auto:"10"`
+	Month **int64   `auto:"20"`
+	Year  ***uint16 `auto:"3030"`
 }
 
 type Example struct {
-	Foo    **bool         `default:"true"`
-	Bar    string         `default:"bar"`
-	Qux    int8           `default:"123"`
-	Name   *Name          `default:"value(struct)"`
-	Age    **Age          `default:"value(struct)"`
-	Arr1   [5]string      `default:"json([\"1\", \"2\", \"3\", \"4\"])"`
-	Arr2   [2][]string    `default:"json([[\"1\", \"2\", \"3\", \"4\"], [\"5\", \"6\", \"7\", \"8\"]])"`
-	Arr3   [3]*Name       `default:"repeat(struct)"`
-	Arr4   [4]int         `default:"repeat(1)"`
-	Slice1 []string       `default:"len(5),cap(10),repeat(1)"`
-	Slice2 []string       `default:"json([\"1\", \"2\", \"3\", \"4\", \"5\"])"`
-	Slice3 []*Name        `default:"len(1),repeat(struct)"`
-	Slice4 [][2]string    `default:"json([[\"1\", \"2\"], [\"3\", \"4\"]])"`
-	Map1   map[string]int `default:"json({\"1\": 1})"`
-	Dur1   time.Duration  `default:"3s"`
-	Dur2   *time.Duration `default:"5h30m15s"`
-	Time1  time.Time      `default:"2024-12-09T02:20:35Z"`
-	Time2  *time.Time     `default:"value(2024-12-09 02:20:35),layout(DateTime)"`
+	Foo    **bool         `auto:"true"`
+	Bar    string         `auto:"bar"`
+	Qux    int8           `auto:"123"`
+	Name   *Name          `auto:"value(struct)"`
+	Age    **Age          `auto:"value(struct)"`
+	Arr1   [5]string      `auto:"json([\"1\", \"2\", \"3\", \"4\"])"`
+	Arr2   [2][]string    `auto:"json([[\"1\", \"2\", \"3\", \"4\"], [\"5\", \"6\", \"7\", \"8\"]])"`
+	Arr3   [3]*Name       `auto:"repeat(struct)"`
+	Arr4   [4]int         `auto:"repeat(1)"`
+	Slice1 []string       `auto:"len(5),cap(10),repeat(1)"`
+	Slice2 []string       `auto:"json([\"1\", \"2\", \"3\", \"4\", \"5\"])"`
+	Slice3 []*Name        `auto:"len(1),repeat(struct)"`
+	Slice4 [][2]string    `auto:"json([[\"1\", \"2\"], [\"3\", \"4\"]])"`
+	Map1   map[string]int `auto:"json({\"1\": 1})"`
+	Map2   map[string]int `auto:"len(5),value(key1:1,key2:2,key3:3)"`
+	Dur1   time.Duration  `auto:"3s"`
+	Dur2   *time.Duration `auto:"5h30m15s"`
+	Time1  time.Time      `auto:"2024-12-09T02:20:35Z"`
+	Time2  *time.Time     `auto:"value(2024-12-09 02:20:35),layout(DateTime)"`
 }
 
 func Test_New(t *testing.T) {
@@ -111,6 +112,11 @@ func Test_New(t *testing.T) {
 			},
 			Map1: map[string]int{
 				"1": 1,
+			},
+			Map2: map[string]int{
+				"key1": 1,
+				"key2": 2,
+				"key3": 3,
 			},
 			Dur1:  time.Second * 3,
 			Dur2:  &dur,

@@ -2,7 +2,7 @@ package autostruct
 
 import "reflect"
 
-const defaultTag = "default"
+const defaultTag = "auto"
 
 type option func(*config)
 
@@ -28,8 +28,8 @@ func WithTag(tag string) option {
 	}
 }
 
-func Set(obj any, opts ...option) error {
-	return structFieldsSetter(newConfig(opts...), reflect.ValueOf(obj))
+func Set(v any, opts ...option) error {
+	return structFieldsSetter(newConfig(opts...), reflect.ValueOf(v))
 }
 
 func MustSet(v any, opts ...option) {
