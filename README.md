@@ -1,6 +1,6 @@
-# auto-struct
+# AutoStruct
 
-`auto-struct` is a Go library that simplifies struct initialization by automatically populating fields based on struct tags.
+`AutoStruct` is a Go library that simplifies struct initialization by automatically populating fields based on struct tags.
 
 ## Installation
 
@@ -12,7 +12,7 @@ go get -u github.com/arsmn/auto-struct@latest
 
 ## Usage
 
-### Defining a struct
+### Defining
 
 ```go
 type Person struct {
@@ -21,7 +21,7 @@ type Person struct {
 }
 ```
 
-### AutoStruct
+### Initialization
 
 Using generics
 ```go
@@ -43,46 +43,57 @@ if err != nil {
 }
 ```
 
-### Supported Types
+## Supported Types
 
-## Primitive Types
+### Primitive Types
 
-[x] `int`
-[x] `int8`
-[x] `int16`
-[x] `int32`
-[x] `int64`
-[x] `uint`
-[x] `uint8`
-[x] `uint16`
-[x] `uint32`
-[x] `uint64`
-[x] `uintptr`
-[x] `float32`
-[x] `float64`
-[x] `complex64`
-[x] `complex128`
-[x] `bool`
-[x] `string`
-[x] `duration`
-[ ] `rune`
-[ ] `byte`
+- [x] `int`
+- [x] `int8`
+- [x] `int16`
+- [x] `int32`
+- [x] `int64`
+- [x] `uint`
+- [x] `uint8`
+- [x] `uint16`
+- [x] `uint32`
+- [x] `uint64`
+- [x] `uintptr`
+- [x] `float32`
+- [x] `float64`
+- [x] `complex64`
+- [x] `complex128`
+- [x] `bool`
+- [x] `string`
+- [x] `duration`
+- [ ] `rune`
+- [ ] `byte`
 
-## Composite Types
+### Composite Types
 
-[x] `struct`
-[x] `array`
-[x] `slice`
-[x] `map`
-[x] `pointer`
-[x] `time`
-[ ] `interface`
-[ ] `channel`
+- [x] `struct`
+- [x] `array`
+- [x] `slice`
+- [x] `map`
+- [x] `pointer`
+- [x] `time`
+- [ ] `interface`
+- [ ] `channel`
 
 
 ## Example
 
 ```go
+type Name struct {
+	FN **string `auto:"FN"`
+	LN *string  `auto:"LN"`
+}
+
+type Age struct {
+	Day   *uint8    `auto:"10"`
+	Month **int64   `auto:"20"`
+	Year  ***uint16 `auto:"3030"`
+}
+
 type Example struct {
 	Foo    **bool         `auto:"true"`
 	Bar    string         `auto:"bar"`
