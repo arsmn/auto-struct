@@ -39,7 +39,7 @@ Using pre-defined variable (returns error)
 var p Person
 person, err := autostruct.Set(p)
 if err != nil {
-    // handler error
+    // handle error
 }
 ```
 
