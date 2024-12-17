@@ -93,8 +93,8 @@ func getSetterFunc(v reflect.Value) setterFunc {
 }
 
 func boolSetter(cfg *config, v reflect.Value, tag string) error {
-	if v.Kind() != reflect.Bool {
-		return fmt.Errorf("BoolSetter does not support [%s]", v.Kind())
+	if kind := v.Kind(); kind != reflect.Bool {
+		return fmt.Errorf("BoolSetter does not support [%s]", kind)
 	}
 
 	b, err := strconv.ParseBool(tag)
@@ -108,8 +108,8 @@ func boolSetter(cfg *config, v reflect.Value, tag string) error {
 }
 
 func stringSetter(cfg *config, v reflect.Value, tag string) error {
-	if v.Kind() != reflect.String {
-		return fmt.Errorf("StringSetter does not support [%s]", v.Kind())
+	if kind := v.Kind(); kind != reflect.String {
+		return fmt.Errorf("StringSetter does not support [%s]", kind)
 	}
 
 	v.SetString(tag)
@@ -130,15 +130,41 @@ func int16Setter(cfg *config, v reflect.Value, tag string) error {
 }
 
 func int32Setter(cfg *config, v reflect.Value, tag string) error {
-	if len(tag) == 3 && tag[0] == '\'' && tag[2] == '\'' {
-		return runeSetter(cfg, v, tag)
+	cmd, err := parseTag(tag)
+	if err != nil {
+		return err
+	}
+
+	if cmd.isRune() {
+		return runeSetter(cfg, v, cmd.val)
 	}
 
 	return intSetter(cfg, v, tag, 32)
 }
 
 func runeSetter(_ *config, v reflect.Value, tag string) error {
-	v.Set(reflect.ValueOf(rune(tag[1])))
+	if kind := v.Kind(); kind != reflect.Int32 {
+		return fmt.Errorf("RuneSetter does not support [%s]", kind)
+	}
+
+	if len(tag) > 1 {
+		return fmt.Errorf("RuneSetter does not support multi-rune [%s]", tag)
+	}
+
+	v.Set(reflect.ValueOf(rune(tag[0])))
+	return nil
+}
+
+func runesSetter(_ *config, v reflect.Value, tag string) error {
+	if kind := v.Type().Kind(); kind != reflect.Slice {
+		return fmt.Errorf("RunesSetter does not support [[]%s]", kind)
+	}
+
+	if kind := v.Type().Elem().Kind(); kind != reflect.Int32 {
+		return fmt.Errorf("RunesSetter does not support [[]%s]", kind)
+	}
+
+	v.Set(reflect.ValueOf([]rune(tag)))
 	return nil
 }
 
@@ -243,8 +269,8 @@ func complexSetter(_ *config, v reflect.Value, tag string, bitSize int) error {
 }
 
 func pointerSetter(cfg *config, v reflect.Value, tag string) error {
-	if v.Kind() != reflect.Pointer {
-		return fmt.Errorf("PointerSetter does not support [%s]", v.Kind())
+	if kind := v.Kind(); kind != reflect.Pointer {
+		return fmt.Errorf("PointerSetter does not support [%s]", kind)
 	}
 
 	if v.IsNil() {
@@ -255,8 +281,8 @@ func pointerSetter(cfg *config, v reflect.Value, tag string) error {
 }
 
 func structSetter(cfg *config, v reflect.Value, tag string) error {
-	if v.Kind() != reflect.Struct {
-		return fmt.Errorf("StructSetter does not support [%s]", v.Kind())
+	if kind := v.Kind(); kind != reflect.Struct {
+		return fmt.Errorf("StructSetter does not support [%s]", kind)
 	}
 
 	cmd, err := parseTag(tag)
@@ -272,8 +298,8 @@ func structSetter(cfg *config, v reflect.Value, tag string) error {
 }
 
 func arraySetter(cfg *config, v reflect.Value, tag string) error {
-	if v.Kind() != reflect.Array {
-		return fmt.Errorf("ArraySetter does not support [%s]", v.Kind())
+	if kind := v.Kind(); kind != reflect.Array {
+		return fmt.Errorf("ArraySetter does not support [%s]", kind)
 	}
 
 	cmd, err := parseTag(tag)
@@ -307,8 +333,8 @@ func arraySetter(cfg *config, v reflect.Value, tag string) error {
 }
 
 func sliceSetter(cfg *config, v reflect.Value, tag string) error {
-	if v.Kind() != reflect.Slice {
-		return fmt.Errorf("SliceSetter does not support [%s]", v.Kind())
+	if kind := v.Kind(); kind != reflect.Slice {
+		return fmt.Errorf("SliceSetter does not support [%s]", kind)
 	}
 
 	cmd, err := parseTag(tag)
@@ -318,6 +344,10 @@ func sliceSetter(cfg *config, v reflect.Value, tag string) error {
 
 	if cmd.isJSON() {
 		return json.Unmarshal([]byte(cmd.val), v.Addr().Interface())
+	}
+
+	if cmd.isRune() {
+		return runesSetter(cfg, v, cmd.val)
 	}
 
 	s := reflect.MakeSlice(reflect.SliceOf(v.Type().Elem()), cmd.len, cmd.cap)
@@ -348,8 +378,8 @@ func sliceSetter(cfg *config, v reflect.Value, tag string) error {
 }
 
 func mapSetter(cfg *config, v reflect.Value, tag string) error {
-	if v.Kind() != reflect.Map {
-		return fmt.Errorf("MapSetter does not support [%s]", v.Kind())
+	if kind := v.Kind(); kind != reflect.Map {
+		return fmt.Errorf("MapSetter does not support [%s]", kind)
 	}
 
 	cmd, err := parseTag(tag)
@@ -459,7 +489,7 @@ func parseTimeLayout(layout string) string {
 func structFieldsSetter(cfg *config, v reflect.Value) error {
 	v = dereference(v)
 
-	if v.Kind() != reflect.Struct {
+	if kind := v.Kind(); kind != reflect.Struct {
 		return fmt.Errorf("[%s] type is not supported. must be struct", v.Kind())
 	}
 

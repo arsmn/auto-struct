@@ -23,6 +23,10 @@ func (c command) isRepeat() bool {
 	return strings.EqualFold(c.txt, "repeat")
 }
 
+func (c command) isRune() bool {
+	return strings.EqualFold(c.txt, "rune")
+}
+
 func (c command) isValStruct() bool {
 	return strings.EqualFold(c.val, "struct")
 }
@@ -35,7 +39,7 @@ func parseTag(tag string) (command, error) {
 	for _, match := range rx.FindAllStringSubmatch(tag, -1) {
 		if len(match) == 3 {
 			switch match[1] {
-			case "value", "json", "repeat":
+			case "value", "json", "repeat", "rune", "byte":
 				if cmd.txt != "" {
 					return command{}, fmt.Errorf("more than one main command is detected")
 				}
