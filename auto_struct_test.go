@@ -38,6 +38,8 @@ type Example struct {
 	Dur2   *time.Duration `auto:"5h30m15s"`
 	Time1  time.Time      `auto:"2024-12-09T02:20:35Z"`
 	Time2  *time.Time     `auto:"value(2024-12-09 02:20:35),layout(DateTime)"`
+	Rune1  rune           `auto:"1'"`
+	Rune2  rune           `auto:"'a'"`
 }
 
 func Test_New(t *testing.T) {
@@ -122,6 +124,8 @@ func Test_New(t *testing.T) {
 			Dur2:  &dur,
 			Time1: time.Date(2024, 12, 9, 2, 20, 35, 0, time.UTC),
 			Time2: &time_,
+			Rune1: '1',
+			Rune2: 'a',
 		}
 
 		if !cmp.Equal(&exp, act) {

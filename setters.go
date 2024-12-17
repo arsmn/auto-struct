@@ -130,7 +130,16 @@ func int16Setter(cfg *config, v reflect.Value, tag string) error {
 }
 
 func int32Setter(cfg *config, v reflect.Value, tag string) error {
+	if len(tag) == 3 && tag[0] == '\'' && tag[2] == '\'' {
+		return runeSetter(cfg, v, tag)
+	}
+
 	return intSetter(cfg, v, tag, 32)
+}
+
+func runeSetter(_ *config, v reflect.Value, tag string) error {
+	v.Set(reflect.ValueOf(rune(tag[1])))
+	return nil
 }
 
 func int64Setter(cfg *config, v reflect.Value, tag string) error {

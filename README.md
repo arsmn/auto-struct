@@ -65,7 +65,7 @@ if err != nil {
 - [x] `bool`
 - [x] `string`
 - [x] `duration`
-- [ ] `rune`
+- [X] `rune`
 - [ ] `byte`
 
 ### Composite Types
