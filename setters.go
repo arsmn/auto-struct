@@ -90,6 +90,8 @@ func getSetterFunc(v reflect.Value) setterFunc {
 		return sliceSetter
 	case reflect.Map:
 		return mapSetter
+	case reflect.Chan:
+		return chanSetter
 	default:
 		return nil
 	}
@@ -481,6 +483,25 @@ func mapSetter(cfg *config, v reflect.Value, tag string) error {
 	}
 
 	v.Set(mapVal)
+
+	return nil
+}
+
+func chanSetter(cfg *config, v reflect.Value, tag string) error {
+	if kind := v.Kind(); kind != reflect.Chan {
+		return fmt.Errorf("ChanSetter does not support [%s]", kind)
+	}
+
+	cmd, err := parseTag(tag)
+	if err != nil {
+		return err
+	}
+
+	if !cmd.isChan() {
+		return nil
+	}
+
+	v.Set(reflect.MakeChan(reflect.ChanOf(reflect.BothDir, v.Type().Elem()), cmd.cap))
 
 	return nil
 }

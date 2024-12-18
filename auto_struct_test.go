@@ -2,6 +2,8 @@ package autostruct
 
 import (
 	"encoding/json"
+	"reflect"
+	"strings"
 	"testing"
 	"time"
 
@@ -47,6 +49,9 @@ type Example struct {
 	Bytes1          []byte          `auto:"byte(abc)"`
 	JSONRawMessage1 json.RawMessage `auto:"json({\"key\": \"value\"})"`
 	JSONRawMessage2 json.RawMessage `auto:"{\"key\": \"value\"}"`
+	Chan1           chan int        `auto:"chan"`
+	Chan2           chan<- int      `auto:"chan,cap(5)"`
+	Chan3           <-chan int      `auto:"chan,cap(5)"`
 }
 
 func Test_New(t *testing.T) {
@@ -139,9 +144,18 @@ func Test_New(t *testing.T) {
 			Bytes1:          []byte("abc"),
 			JSONRawMessage1: json.RawMessage(`{"key": "value"}`),
 			JSONRawMessage2: json.RawMessage(`{"key": "value"}`),
+			Chan1:           make(chan int),
+			Chan2:           make(chan<- int, 5),
+			Chan3:           make(<-chan int, 5),
 		}
 
-		if !cmp.Equal(&exp, act) {
+		if !cmp.Equal(&exp, act, cmp.FilterPath(
+			func(p cmp.Path) bool { return strings.HasPrefix(p.String(), "Chan") },
+			cmp.Comparer(func(a, b any) bool {
+				return reflect.ValueOf(a).Cap() == reflect.ValueOf(b).Cap() &&
+					reflect.TypeOf(a).ChanDir() == reflect.TypeOf(b).ChanDir()
+			}),
+		)) {
 			t.Error(cmp.Diff(&exp, act))
 		}
 	})
