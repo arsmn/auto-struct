@@ -64,9 +64,8 @@ if err != nil {
 - [x] `complex128`
 - [x] `bool`
 - [x] `string`
-- [x] `duration`
-- [X] `rune`
-- [ ] `byte`
+- [x] `rune`
+- [x] `byte`
 
 ### Composite Types
 
@@ -75,10 +74,11 @@ if err != nil {
 - [x] `slice`
 - [x] `map`
 - [x] `pointer`
-- [x] `time`
+- [x] `time.Time`
+- [x] `time.Duration`
 - [ ] `interface`
 - [ ] `channel`
-
+- [ ] `json.RawMessage`
 
 ## Example
 
@@ -114,5 +114,8 @@ type Example struct {
 	Dur2   *time.Duration `auto:"5h30m15s"`
 	Time1  time.Time      `auto:"2024-12-09T02:20:35Z"`
 	Time2  *time.Time     `auto:"value(2024-12-09 02:20:35),layout(DateTime)"`
+	Rune1  rune           `auto:"rune(1)"`
+	Rune2  rune           `auto:"rune(a)"`
+	Runes1 []rune         `auto:"rune(abc)"`
 }
 ```

@@ -27,6 +27,10 @@ func (c command) isRune() bool {
 	return strings.EqualFold(c.txt, "rune")
 }
 
+func (c command) isByte() bool {
+	return strings.EqualFold(c.txt, "byte")
+}
+
 func (c command) isValStruct() bool {
 	return strings.EqualFold(c.val, "struct")
 }

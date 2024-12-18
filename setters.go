@@ -157,7 +157,7 @@ func runeSetter(_ *config, v reflect.Value, tag string) error {
 
 func runesSetter(_ *config, v reflect.Value, tag string) error {
 	if kind := v.Type().Kind(); kind != reflect.Slice {
-		return fmt.Errorf("RunesSetter does not support [[]%s]", kind)
+		return fmt.Errorf("RunesSetter does not support [%s]", kind)
 	}
 
 	if kind := v.Type().Elem().Kind(); kind != reflect.Int32 {
@@ -192,7 +192,42 @@ func uint0Setter(cfg *config, v reflect.Value, tag string) error {
 }
 
 func uint8Setter(cfg *config, v reflect.Value, tag string) error {
+	cmd, err := parseTag(tag)
+	if err != nil {
+		return err
+	}
+
+	if cmd.isByte() {
+		return byteSetter(cfg, v, cmd.val)
+	}
+
 	return uintSetter(cfg, v, tag, 8)
+}
+
+func byteSetter(_ *config, v reflect.Value, tag string) error {
+	if kind := v.Kind(); kind != reflect.Uint8 {
+		return fmt.Errorf("ByteSetter does not support [%s]", kind)
+	}
+
+	if len(tag) > 1 {
+		return fmt.Errorf("ByteSetter does not support multi-byte [%s]", tag)
+	}
+
+	v.Set(reflect.ValueOf(byte(tag[0])))
+	return nil
+}
+
+func bytesSetter(_ *config, v reflect.Value, tag string) error {
+	if kind := v.Type().Kind(); kind != reflect.Slice {
+		return fmt.Errorf("BytesSetter does not support [%s]", kind)
+	}
+
+	if kind := v.Type().Elem().Kind(); kind != reflect.Uint8 {
+		return fmt.Errorf("BytesSetter does not support [[]%s]", kind)
+	}
+
+	v.SetBytes([]byte(tag))
+	return nil
 }
 
 func uint16Setter(cfg *config, v reflect.Value, tag string) error {
@@ -348,6 +383,10 @@ func sliceSetter(cfg *config, v reflect.Value, tag string) error {
 
 	if cmd.isRune() {
 		return runesSetter(cfg, v, cmd.val)
+	}
+
+	if cmd.isByte() {
+		return bytesSetter(cfg, v, cmd.val)
 	}
 
 	s := reflect.MakeSlice(reflect.SliceOf(v.Type().Elem()), cmd.len, cmd.cap)

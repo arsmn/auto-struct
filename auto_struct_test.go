@@ -41,6 +41,9 @@ type Example struct {
 	Rune1  rune           `auto:"rune(1)"`
 	Rune2  rune           `auto:"rune(a)"`
 	Runes1 []rune         `auto:"rune(abc)"`
+	Byte1  byte           `auto:"byte(1)"`
+	Byte2  byte           `auto:"byte(a)"`
+	Bytes1 []byte         `auto:"byte(abc)"`
 }
 
 func Test_New(t *testing.T) {
@@ -128,6 +131,9 @@ func Test_New(t *testing.T) {
 			Rune1:  '1',
 			Rune2:  'a',
 			Runes1: []rune{'a', 'b', 'c'},
+			Byte1:  byte('1'),
+			Byte2:  byte('a'),
+			Bytes1: []byte("abc"),
 		}
 
 		if !cmp.Equal(&exp, act) {
