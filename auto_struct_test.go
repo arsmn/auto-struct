@@ -52,6 +52,11 @@ type Example struct {
 	Chan1           chan int        `auto:"chan"`
 	Chan2           chan<- int      `auto:"chan,cap(5)"`
 	Chan3           <-chan int      `auto:"chan,cap(5)"`
+	Interface1      any             `auto:"123"`
+	Interface2      any             `auto:"true"`
+	Interface3      any             `auto:"\"abc\""`
+	Interface4      any             `auto:"{\"key\": \"value\"}"`
+	Interface5      any             `auto:"[\"1\", \"2\", \"3\"]"`
 }
 
 func Test_New(t *testing.T) {
@@ -147,6 +152,11 @@ func Test_New(t *testing.T) {
 			Chan1:           make(chan int),
 			Chan2:           make(chan<- int, 5),
 			Chan3:           make(<-chan int, 5),
+			Interface1:      float64(123),
+			Interface2:      true,
+			Interface3:      "abc",
+			Interface4:      map[string]any{"key": "value"},
+			Interface5:      []any{"1", "2", "3"},
 		}
 
 		if !cmp.Equal(&exp, act, cmp.FilterPath(

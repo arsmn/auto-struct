@@ -78,7 +78,7 @@ if err != nil {
 - [x] `time.Duration`
 - [x] `json.RawMessage`
 - [x] `channel`
-- [ ] `interface`
+- [x] `interface`
 
 ## Example
 

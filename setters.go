@@ -92,6 +92,8 @@ func getSetterFunc(v reflect.Value) setterFunc {
 		return mapSetter
 	case reflect.Chan:
 		return chanSetter
+	case reflect.Interface:
+		return interfaceSetter
 	default:
 		return nil
 	}
@@ -504,6 +506,27 @@ func chanSetter(cfg *config, v reflect.Value, tag string) error {
 	v.Set(reflect.MakeChan(reflect.ChanOf(reflect.BothDir, v.Type().Elem()), cmd.cap))
 
 	return nil
+}
+
+func interfaceSetter(cfg *config, v reflect.Value, tag string) error {
+	if kind := v.Kind(); kind != reflect.Interface {
+		return fmt.Errorf("InterfaceSetter does not support [%s]", kind)
+	}
+
+	if v.NumMethod() > 0 {
+		return fmt.Errorf("InterfaceSetter does not support interface with methods")
+	}
+
+	cmd, err := parseTag(tag)
+	if err != nil {
+		return err
+	}
+
+	if cmd.isJSON() {
+		return json.Unmarshal([]byte(cmd.val), v.Addr().Interface())
+	}
+
+	return json.Unmarshal([]byte(tag), v.Addr().Interface())
 }
 
 func durationSetter(_ *config, v reflect.Value, tag string) error {
