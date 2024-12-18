@@ -76,9 +76,9 @@ if err != nil {
 - [x] `pointer`
 - [x] `time.Time`
 - [x] `time.Duration`
+- [x] `json.RawMessage`
 - [ ] `interface`
 - [ ] `channel`
-- [ ] `json.RawMessage`
 
 ## Example
 

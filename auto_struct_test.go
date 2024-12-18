@@ -1,6 +1,7 @@
 package autostruct
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -19,31 +20,33 @@ type Age struct {
 }
 
 type Example struct {
-	Foo    **bool         `auto:"true"`
-	Bar    string         `auto:"bar"`
-	Qux    int8           `auto:"123"`
-	Name   *Name          `auto:"value(struct)"`
-	Age    **Age          `auto:"value(struct)"`
-	Arr1   [5]string      `auto:"json([\"1\", \"2\", \"3\", \"4\"])"`
-	Arr2   [2][]string    `auto:"json([[\"1\", \"2\", \"3\", \"4\"], [\"5\", \"6\", \"7\", \"8\"]])"`
-	Arr3   [3]*Name       `auto:"repeat(struct)"`
-	Arr4   [4]int         `auto:"repeat(1)"`
-	Slice1 []string       `auto:"len(5),cap(10),repeat(1)"`
-	Slice2 []string       `auto:"json([\"1\", \"2\", \"3\", \"4\", \"5\"])"`
-	Slice3 []*Name        `auto:"len(1),repeat(struct)"`
-	Slice4 [][2]string    `auto:"json([[\"1\", \"2\"], [\"3\", \"4\"]])"`
-	Map1   map[string]int `auto:"json({\"1\": 1})"`
-	Map2   map[string]int `auto:"len(5),value(key1:1,key2:2,key3:3)"`
-	Dur1   time.Duration  `auto:"3s"`
-	Dur2   *time.Duration `auto:"5h30m15s"`
-	Time1  time.Time      `auto:"2024-12-09T02:20:35Z"`
-	Time2  *time.Time     `auto:"value(2024-12-09 02:20:35),layout(DateTime)"`
-	Rune1  rune           `auto:"rune(1)"`
-	Rune2  rune           `auto:"rune(a)"`
-	Runes1 []rune         `auto:"rune(abc)"`
-	Byte1  byte           `auto:"byte(1)"`
-	Byte2  byte           `auto:"byte(a)"`
-	Bytes1 []byte         `auto:"byte(abc)"`
+	Foo             **bool          `auto:"true"`
+	Bar             string          `auto:"bar"`
+	Qux             int8            `auto:"123"`
+	Name            *Name           `auto:"value(struct)"`
+	Age             **Age           `auto:"value(struct)"`
+	Arr1            [5]string       `auto:"json([\"1\", \"2\", \"3\", \"4\"])"`
+	Arr2            [2][]string     `auto:"json([[\"1\", \"2\", \"3\", \"4\"], [\"5\", \"6\", \"7\", \"8\"]])"`
+	Arr3            [3]*Name        `auto:"repeat(struct)"`
+	Arr4            [4]int          `auto:"repeat(1)"`
+	Slice1          []string        `auto:"len(5),cap(10),repeat(1)"`
+	Slice2          []string        `auto:"json([\"1\", \"2\", \"3\", \"4\", \"5\"])"`
+	Slice3          []*Name         `auto:"len(1),repeat(struct)"`
+	Slice4          [][2]string     `auto:"json([[\"1\", \"2\"], [\"3\", \"4\"]])"`
+	Map1            map[string]int  `auto:"json({\"1\": 1})"`
+	Map2            map[string]int  `auto:"len(5),value(key1:1,key2:2,key3:3)"`
+	Dur1            time.Duration   `auto:"3s"`
+	Dur2            *time.Duration  `auto:"5h30m15s"`
+	Time1           time.Time       `auto:"2024-12-09T02:20:35Z"`
+	Time2           *time.Time      `auto:"value(2024-12-09 02:20:35),layout(DateTime)"`
+	Rune1           rune            `auto:"rune(1)"`
+	Rune2           rune            `auto:"rune(a)"`
+	Runes1          []rune          `auto:"rune(abc)"`
+	Byte1           byte            `auto:"byte(1)"`
+	Byte2           byte            `auto:"byte(a)"`
+	Bytes1          []byte          `auto:"byte(abc)"`
+	JSONRawMessage1 json.RawMessage `auto:"json({\"key\": \"value\"})"`
+	JSONRawMessage2 json.RawMessage `auto:"{\"key\": \"value\"}"`
 }
 
 func Test_New(t *testing.T) {
@@ -124,16 +127,18 @@ func Test_New(t *testing.T) {
 				"key2": 2,
 				"key3": 3,
 			},
-			Dur1:   time.Second * 3,
-			Dur2:   &dur,
-			Time1:  time.Date(2024, 12, 9, 2, 20, 35, 0, time.UTC),
-			Time2:  &time_,
-			Rune1:  '1',
-			Rune2:  'a',
-			Runes1: []rune{'a', 'b', 'c'},
-			Byte1:  byte('1'),
-			Byte2:  byte('a'),
-			Bytes1: []byte("abc"),
+			Dur1:            time.Second * 3,
+			Dur2:            &dur,
+			Time1:           time.Date(2024, 12, 9, 2, 20, 35, 0, time.UTC),
+			Time2:           &time_,
+			Rune1:           '1',
+			Rune2:           'a',
+			Runes1:          []rune{'a', 'b', 'c'},
+			Byte1:           byte('1'),
+			Byte2:           byte('a'),
+			Bytes1:          []byte("abc"),
+			JSONRawMessage1: json.RawMessage(`{"key": "value"}`),
+			JSONRawMessage2: json.RawMessage(`{"key": "value"}`),
 		}
 
 		if !cmp.Equal(&exp, act) {

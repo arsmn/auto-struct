@@ -12,9 +12,10 @@ import (
 type setterFunc func(*config, reflect.Value, string) error
 
 var (
-	timeType     = reflect.TypeOf(time.Time{})
-	durationType = reflect.TypeOf(time.Duration(0))
-	timeFormats  = map[string]string{
+	timeType       = reflect.TypeOf(time.Time{})
+	durationType   = reflect.TypeOf(time.Duration(0))
+	jsonRawMessage = reflect.TypeOf(json.RawMessage{})
+	timeFormats    = map[string]string{
 		"ANSIC":       time.ANSIC,
 		"UnixDate":    time.UnixDate,
 		"RubyDate":    time.RubyDate,
@@ -42,6 +43,8 @@ func getSetterFunc(v reflect.Value) setterFunc {
 		return durationSetter
 	case timeType:
 		return timeSetter
+	case jsonRawMessage:
+		return jsonRawMessageSetter
 	}
 
 	switch v.Kind() {
@@ -152,6 +155,7 @@ func runeSetter(_ *config, v reflect.Value, tag string) error {
 	}
 
 	v.Set(reflect.ValueOf(rune(tag[0])))
+
 	return nil
 }
 
@@ -165,6 +169,7 @@ func runesSetter(_ *config, v reflect.Value, tag string) error {
 	}
 
 	v.Set(reflect.ValueOf([]rune(tag)))
+
 	return nil
 }
 
@@ -214,6 +219,7 @@ func byteSetter(_ *config, v reflect.Value, tag string) error {
 	}
 
 	v.Set(reflect.ValueOf(byte(tag[0])))
+
 	return nil
 }
 
@@ -227,6 +233,7 @@ func bytesSetter(_ *config, v reflect.Value, tag string) error {
 	}
 
 	v.SetBytes([]byte(tag))
+
 	return nil
 }
 
@@ -509,6 +516,26 @@ func timeSetter(_ *config, v reflect.Value, tag string) error {
 	}
 
 	v.Set(reflect.ValueOf(t))
+
+	return nil
+}
+
+func jsonRawMessageSetter(_ *config, v reflect.Value, tag string) error {
+	if v.Type() != jsonRawMessage {
+		return fmt.Errorf("JSONRawMessageSetter does not support [%s]", v.Kind())
+	}
+
+	cmd, err := parseTag(tag)
+	if err != nil {
+		return err
+	}
+
+	if cmd.isJSON() {
+		v.Set(reflect.ValueOf(json.RawMessage(cmd.val)))
+		return nil
+	}
+
+	v.Set(reflect.ValueOf(json.RawMessage(tag)))
 
 	return nil
 }
