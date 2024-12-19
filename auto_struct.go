@@ -7,7 +7,9 @@ const defaultTag = "auto"
 type option func(*config)
 
 type config struct {
-	tag string
+	tag      string
+	cache    *cache
+	deepCopy bool
 }
 
 func newConfig(opts ...option) *config {
@@ -25,6 +27,18 @@ func newConfig(opts ...option) *config {
 func WithTag(tag string) option {
 	return func(c *config) {
 		c.tag = tag
+	}
+}
+
+func WithCache(cache *cache) option {
+	return func(c *config) {
+		c.cache = cache
+	}
+}
+
+func WithDeepCopy() option {
+	return func(c *config) {
+		c.deepCopy = true
 	}
 }
 

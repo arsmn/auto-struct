@@ -99,6 +99,18 @@ func Test_New(t *testing.T) {
 		return current.Interface()
 	}
 
+	cmpOptions := func() []cmp.Option {
+		return []cmp.Option{
+			cmp.FilterPath(
+				func(p cmp.Path) bool { return strings.HasPrefix(p.String(), "Chan") },
+				cmp.Comparer(func(a, b any) bool {
+					return reflect.ValueOf(a).Cap() == reflect.ValueOf(b).Cap() &&
+						reflect.TypeOf(a).ChanDir() == reflect.TypeOf(b).ChanDir()
+				}),
+			),
+		}
+	}
+
 	t.Run("success", func(t *testing.T) {
 		act := New[**Test]()
 
@@ -199,14 +211,252 @@ func Test_New(t *testing.T) {
 			Interface5:      []any{"1", "2", "3"},
 		}
 
-		if !cmp.Equal(&exp, act, cmp.FilterPath(
-			func(p cmp.Path) bool { return strings.HasPrefix(p.String(), "Chan") },
-			cmp.Comparer(func(a, b any) bool {
-				return reflect.ValueOf(a).Cap() == reflect.ValueOf(b).Cap() &&
-					reflect.TypeOf(a).ChanDir() == reflect.TypeOf(b).ChanDir()
-			}),
-		)) {
-			t.Error(cmp.Diff(&exp, act))
+		if !cmp.Equal(&exp, act, cmpOptions()...) {
+			t.Error(cmp.Diff(&exp, act, cmpOptions()...))
 		}
 	})
+
+	t.Run("success-with-cache", func(t *testing.T) {
+		cached := NewCache()
+		act1 := New[Test](WithCache(cached))
+		act2 := New[Test](WithCache(cached))
+
+		exp := Test{
+			Struct1: toPointer(Basic{
+				Bool1:   true,
+				Bool2:   false,
+				Bool3:   true,
+				Bool4:   false,
+				String1: "abc",
+				String2: "123",
+			}, 1).(*Basic),
+			Struct2: toPointer(Signed{
+				Int:   toPointer(int(0), 1).(*int),
+				Int8:  toPointer(int8(8), 2).(**int8),
+				Int16: toPointer(int16(16), 3).(***int16),
+				Int32: toPointer(int32(32), 4).(****int32),
+				Int64: toPointer(int64(64), 5).(*****int64),
+			}, 2).(**Signed),
+			Struct3: toPointer(Unsigned{
+				Uint:   toPointer(uint(0), 1).(*uint),
+				Uint8:  toPointer(uint8(8), 2).(**uint8),
+				Uint16: toPointer(uint16(16), 3).(***uint16),
+				Uint32: toPointer(uint32(32), 4).(****uint32),
+				Uint64: toPointer(uint64(64), 5).(*****uint64),
+			}, 3).(***Unsigned),
+			Struct4: toPointer(Float{
+				Float1: float32(1.2345),
+				Float2: float64(1.23456789),
+			}, 4).(****Float),
+			Struct5: toPointer(Complex{
+				Complex1: complex64(1 + 2i),
+				Complex2: complex128(3 + 4i),
+			}, 5).(*****Complex),
+			Arr1: [5]string{"1", "2", "3", "4", ""},
+			Arr2: [2][]string{{"1", "2", "3", "4"}, {"5", "6", "7", "8"}},
+			Arr3: [3]*Basic{
+				{
+					Bool1:   true,
+					Bool2:   false,
+					Bool3:   true,
+					Bool4:   false,
+					String1: "abc",
+					String2: "123",
+				},
+				{
+					Bool1:   true,
+					Bool2:   false,
+					Bool3:   true,
+					Bool4:   false,
+					String1: "abc",
+					String2: "123",
+				},
+				{
+					Bool1:   true,
+					Bool2:   false,
+					Bool3:   true,
+					Bool4:   false,
+					String1: "abc",
+					String2: "123",
+				},
+			},
+			Arr4:   [4]int{1, 1, 1, 1},
+			Slice1: []string{"1", "1", "1", "1", "1"},
+			Slice2: []string{"1", "2", "3", "4", "5"},
+			Slice3: []*Basic{
+				{
+					Bool1:   true,
+					Bool2:   false,
+					Bool3:   true,
+					Bool4:   false,
+					String1: "abc",
+					String2: "123",
+				},
+			},
+			Slice4:          [][2]string{{"1", "2"}, {"3", "4"}},
+			Map1:            map[string]int{"1": 1},
+			Map2:            map[string]int{"key1": 1, "key2": 2, "key3": 3},
+			Duration1:       time.Second * 3,
+			Duration2:       toPointer(((5 * time.Hour) + (30 * time.Minute) + (15 * time.Second)), 1).(*time.Duration),
+			Time1:           time.Date(2024, 12, 9, 2, 20, 35, 0, time.UTC),
+			Time2:           toPointer(time.Date(2024, 12, 9, 2, 20, 35, 0, time.UTC), 1).(*time.Time),
+			Rune1:           '1',
+			Rune2:           'a',
+			Runes1:          []rune{'a', 'b', 'c'},
+			Byte1:           byte('1'),
+			Byte2:           byte('a'),
+			Bytes1:          []byte("abc"),
+			JSONRawMessage1: json.RawMessage(`{"key": "value"}`),
+			JSONRawMessage2: json.RawMessage(`{"key": "value"}`),
+			Chan1:           make(chan int),
+			Chan2:           make(chan<- int, 5),
+			Chan3:           make(<-chan int, 10),
+			Interface1:      float64(123),
+			Interface2:      true,
+			Interface3:      "abc",
+			Interface4:      map[string]any{"key": "value"},
+			Interface5:      []any{"1", "2", "3"},
+		}
+
+		if !cmp.Equal(exp, act1, cmpOptions()...) {
+			t.Error(cmp.Diff(exp, act1, cmpOptions()...))
+		}
+
+		if !cmp.Equal(exp, act2, cmpOptions()...) {
+			t.Error(cmp.Diff(exp, act2, cmpOptions()...))
+		}
+	})
+
+	t.Run("success-with-deep-copy", func(t *testing.T) {
+		cached := NewCache()
+		act1 := New[Test](WithCache(cached), WithDeepCopy())
+		act2 := New[Test](WithCache(cached), WithDeepCopy())
+
+		exp := Test{
+			Struct1: toPointer(Basic{
+				Bool1:   true,
+				Bool2:   false,
+				Bool3:   true,
+				Bool4:   false,
+				String1: "abc",
+				String2: "123",
+			}, 1).(*Basic),
+			Struct2: toPointer(Signed{
+				Int:   toPointer(int(0), 1).(*int),
+				Int8:  toPointer(int8(8), 2).(**int8),
+				Int16: toPointer(int16(16), 3).(***int16),
+				Int32: toPointer(int32(32), 4).(****int32),
+				Int64: toPointer(int64(64), 5).(*****int64),
+			}, 2).(**Signed),
+			Struct3: toPointer(Unsigned{
+				Uint:   toPointer(uint(0), 1).(*uint),
+				Uint8:  toPointer(uint8(8), 2).(**uint8),
+				Uint16: toPointer(uint16(16), 3).(***uint16),
+				Uint32: toPointer(uint32(32), 4).(****uint32),
+				Uint64: toPointer(uint64(64), 5).(*****uint64),
+			}, 3).(***Unsigned),
+			Struct4: toPointer(Float{
+				Float1: float32(1.2345),
+				Float2: float64(1.23456789),
+			}, 4).(****Float),
+			Struct5: toPointer(Complex{
+				Complex1: complex64(1 + 2i),
+				Complex2: complex128(3 + 4i),
+			}, 5).(*****Complex),
+			Arr1: [5]string{"1", "2", "3", "4", ""},
+			Arr2: [2][]string{{"1", "2", "3", "4"}, {"5", "6", "7", "8"}},
+			Arr3: [3]*Basic{
+				{
+					Bool1:   true,
+					Bool2:   false,
+					Bool3:   true,
+					Bool4:   false,
+					String1: "abc",
+					String2: "123",
+				},
+				{
+					Bool1:   true,
+					Bool2:   false,
+					Bool3:   true,
+					Bool4:   false,
+					String1: "abc",
+					String2: "123",
+				},
+				{
+					Bool1:   true,
+					Bool2:   false,
+					Bool3:   true,
+					Bool4:   false,
+					String1: "abc",
+					String2: "123",
+				},
+			},
+			Arr4:   [4]int{1, 1, 1, 1},
+			Slice1: []string{"1", "1", "1", "1", "1"},
+			Slice2: []string{"1", "2", "3", "4", "5"},
+			Slice3: []*Basic{
+				{
+					Bool1:   true,
+					Bool2:   false,
+					Bool3:   true,
+					Bool4:   false,
+					String1: "abc",
+					String2: "123",
+				},
+			},
+			Slice4:          [][2]string{{"1", "2"}, {"3", "4"}},
+			Map1:            map[string]int{"1": 1},
+			Map2:            map[string]int{"key1": 1, "key2": 2, "key3": 3},
+			Duration1:       time.Second * 3,
+			Duration2:       toPointer(((5 * time.Hour) + (30 * time.Minute) + (15 * time.Second)), 1).(*time.Duration),
+			Time1:           time.Date(2024, 12, 9, 2, 20, 35, 0, time.UTC),
+			Time2:           toPointer(time.Date(2024, 12, 9, 2, 20, 35, 0, time.UTC), 1).(*time.Time),
+			Rune1:           '1',
+			Rune2:           'a',
+			Runes1:          []rune{'a', 'b', 'c'},
+			Byte1:           byte('1'),
+			Byte2:           byte('a'),
+			Bytes1:          []byte("abc"),
+			JSONRawMessage1: json.RawMessage(`{"key": "value"}`),
+			JSONRawMessage2: json.RawMessage(`{"key": "value"}`),
+			Chan1:           make(chan int),
+			Chan2:           make(chan<- int, 5),
+			Chan3:           make(<-chan int, 10),
+			Interface1:      float64(123),
+			Interface2:      true,
+			Interface3:      "abc",
+			Interface4:      map[string]any{"key": "value"},
+			Interface5:      []any{"1", "2", "3"},
+		}
+
+		if !cmp.Equal(exp, act1, cmpOptions()...) {
+			t.Error(cmp.Diff(exp, act1, cmpOptions()...))
+		}
+
+		if !cmp.Equal(exp, act2, cmpOptions()...) {
+			t.Error(cmp.Diff(exp, act2, cmpOptions()...))
+		}
+	})
+}
+
+func Benchmark_NotCached(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		_ = New[Test]()
+	}
+}
+
+func Benchmark_Cached(b *testing.B) {
+	cached := NewCache()
+
+	for i := 0; i < b.N; i++ {
+		_ = New[Test](WithCache(cached))
+	}
+}
+
+func Benchmark_DeepCopy(b *testing.B) {
+	cached := NewCache()
+
+	for i := 0; i < b.N; i++ {
+		_ = New[Test](WithCache(cached), WithDeepCopy())
+	}
 }

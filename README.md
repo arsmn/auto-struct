@@ -1,10 +1,10 @@
 # AutoStruct
 
-`AutoStruct` is a Go library that simplifies struct initialization by automatically populating fields based on struct tags.
+`AutoStruct` is a Go library designed to streamline struct initialization by automatically populating fields based on struct tags.
 
 ## Installation
 
-You can install `auto-struct` using `go get`:
+Install `auto-struct` using `go get`:
 
 ```bash
 go get -u github.com/arsmn/auto-struct@latest
@@ -12,7 +12,7 @@ go get -u github.com/arsmn/auto-struct@latest
 
 ## Usage
 
-### Defining
+### Defining a Struct
 
 ```go
 type Person struct {
@@ -21,25 +21,25 @@ type Person struct {
 }
 ```
 
-### Initialization
+### Initializing a Struct
 
-Using generics
+Using generics:
 ```go
 person := autostruct.New[Person]()
 ```
 
-Using pre-defined variable (panics on error)
+Using a pre-defined variable (panics on error):
 ```go
 var p Person
 person := autostruct.MustSet(p)
 ```
 
-Using pre-defined variable (returns error)
+Using a pre-defined variable (returns error):
 ```go
 var p Person
 person, err := autostruct.Set(p)
 if err != nil {
-    // handle error
+	// handle error
 }
 ```
 
@@ -65,7 +65,6 @@ if err != nil {
 | `complex128`         |                         |
 | `rune`               |                         |
 | `byte`               |                         |
-
 
 ## Example
 
@@ -143,3 +142,53 @@ type Test struct {
 	Interface5      any             `auto:"[\"1\", \"2\", \"3\"]"`
 }
 ```
+
+## Options
+
+### WithTag
+Override the default tag value (`auto`) used for initialization.
+
+```go
+type Test struct {
+	String string `default:"abc"`
+}
+
+test := autostruct.New[Test](autostruct.WithTag("default"))
+```
+
+### WithCache
+Enable caching to improve performance by reusing generated values.
+
+```go
+type Test struct {
+	String string `auto:"abc"`
+}
+
+cache := autostruct.NewCache()
+test1 := autostruct.New[Test](autostruct.WithCache(cache))
+test2 := autostruct.New[Test](autostruct.WithCache(cache))
+```
+
+### WithDeepCopy
+When caching is enabled, reference types will point to the same values. Use DeepCopy to ensure each instance has its own copy.
+
+```go
+type Test struct {
+	Slice []string `auto:"len(5),repeat(abc)"`
+}
+
+cache := autostruct.NewCache()
+test1 := autostruct.New[Test](autostruct.WithCache(cache), autostruct.WithDeepCopy())
+test2 := autostruct.New[Test](autostruct.WithCache(cache), autostruct.WithDeepCopy())
+```
+`test1.Slice` and `test2.Slice` will point to different underlying arrays.
+
+## Benchmark
+
+The following benchmarks were run on a Linux system (amd64) with an Intel(R) Core(TM) i7-10510U CPU @ 1.80GHz:
+
+| Benchmark          | Iterations | Time per Operation | Memory per Operation | Allocations per Operation |
+|--------------------|------------|--------------------|----------------------|---------------------------|
+| Cached             | 95,714     | 12,332 ns/op       | 4,346 B/op           | 177 allocs/op             |
+| Deep Copy          | 73,220     | 16,838 ns/op       | 6,011 B/op           | 225 allocs/op             |
+| Not Cached         | 10,000     | 105,668 ns/op      | 48,564 B/op          | 751 allocs/op             |

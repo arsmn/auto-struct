@@ -530,8 +530,26 @@ func structFieldsSetter(cfg *config, v reflect.Value) error {
 	typ := v.Type()
 
 	for i := 0; i < v.NumField(); i++ {
-		if err := valueSetterRaw(cfg, v.Field(i), typ.Field(i).Tag.Get(cfg.tag)); err != nil {
+		field := typ.Field(i)
+		val := v.Field(i)
+		key := fmt.Sprintf("%s.%s.%s", typ.PkgPath(), typ.Name(), field.Name)
+
+		if cfg.cache != nil {
+			if cached, ok := cfg.cache.get(key); ok {
+				if cfg.deepCopy {
+					cached = deepCopy(cached)
+				}
+				val.Set(cached)
+				continue
+			}
+		}
+
+		if err := valueSetterRaw(cfg, val, field.Tag.Get(cfg.tag)); err != nil {
 			return err
+		}
+
+		if cfg.cache != nil {
+			cfg.cache.set(key, val)
 		}
 	}
 
@@ -548,12 +566,12 @@ func valueSetterRaw(cfg *config, v reflect.Value, tag string) error {
 
 func valueSetterCmd(cfg *config, v reflect.Value, cmd command) error {
 	if !v.CanSet() {
-		return fmt.Errorf("[%s] is not exported", v)
+		return fmt.Errorf("field is not exported: [%s]", v)
 	}
 
 	fn := getSetterFunc(v)
 	if fn == nil {
-		return fmt.Errorf("[%s] type is not supported", v.Kind())
+		return fmt.Errorf("type is not supported: [%s]", v.Kind())
 	}
 
 	return fn(cfg, v, cmd)
@@ -568,4 +586,29 @@ func dereference(rv reflect.Value) reflect.Value {
 	}
 
 	return rv
+}
+
+func deepCopy(srcVal reflect.Value) reflect.Value {
+	srcType := srcVal.Type()
+
+	switch srcVal.Kind() {
+	case reflect.Pointer:
+		copy := reflect.New(srcType.Elem())
+		copy.Elem().Set(deepCopy(srcVal.Elem()))
+		return copy
+	case reflect.Slice:
+		copy := reflect.MakeSlice(srcType, srcVal.Len(), srcVal.Cap())
+		for i := 0; i < srcVal.Len(); i++ {
+			copy.Index(i).Set(deepCopy(srcVal.Index(i)))
+		}
+		return copy
+	case reflect.Map:
+		copy := reflect.MakeMap(srcType)
+		for _, key := range srcVal.MapKeys() {
+			copy.SetMapIndex(key, deepCopy(srcVal.MapIndex(key)))
+		}
+		return copy
+	default:
+		return srcVal
+	}
 }
