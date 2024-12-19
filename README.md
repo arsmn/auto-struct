@@ -45,77 +45,101 @@ if err != nil {
 
 ## Supported Types
 
-### Primitive Types
+| Primitive Types      | Composite Types         |
+|----------------------|-------------------------|
+| `bool`               | `struct`                |
+| `string`             | `array`                 |
+| `int`                | `slice`                 |
+| `int8`               | `map`                   |
+| `int16`              | `pointer`               |
+| `int32`              | `interface`             |
+| `int64`              | `channel`               |
+| `uint`               | `time.Time`             |
+| `uint8`              | `time.Duration`         |
+| `uint16`             | `json.RawMessage`       |
+| `uint32`             |                         |
+| `uint64`             |                         |
+| `float32`            |                         |
+| `float64`            |                         |
+| `complex64`          |                         |
+| `complex128`         |                         |
+| `rune`               |                         |
+| `byte`               |                         |
 
-- [x] `int`
-- [x] `int8`
-- [x] `int16`
-- [x] `int32`
-- [x] `int64`
-- [x] `uint`
-- [x] `uint8`
-- [x] `uint16`
-- [x] `uint32`
-- [x] `uint64`
-- [x] `uintptr`
-- [x] `float32`
-- [x] `float64`
-- [x] `complex64`
-- [x] `complex128`
-- [x] `bool`
-- [x] `string`
-- [x] `rune`
-- [x] `byte`
-
-### Composite Types
-
-- [x] `struct`
-- [x] `array`
-- [x] `slice`
-- [x] `map`
-- [x] `pointer`
-- [x] `time.Time`
-- [x] `time.Duration`
-- [x] `json.RawMessage`
-- [x] `channel`
-- [x] `interface`
 
 ## Example
 
 ```go
-type Name struct {
-	FN **string `auto:"FN"`
-	LN *string  `auto:"LN"`
+type Basic struct {
+	Bool1   bool   `auto:"true"`
+	Bool2   bool   `auto:"false"`
+	Bool3   bool   `auto:"t"`
+	Bool4   bool   `auto:"0"`
+	String1 string `auto:"abc"`
+	String2 string `auto:"123"`
 }
 
-type Age struct {
-	Day   *uint8    `auto:"10"`
-	Month **int64   `auto:"20"`
-	Year  ***uint16 `auto:"3030"`
+type Signed struct {
+	Int   *int       `auto:"0"`
+	Int8  **int8     `auto:"8"`
+	Int16 ***int16   `auto:"16"`
+	Int32 ****int32  `auto:"32"`
+	Int64 *****int64 `auto:"64"`
 }
 
-type Example struct {
-	Foo    **bool         `auto:"true"`
-	Bar    string         `auto:"bar"`
-	Qux    int8           `auto:"123"`
-	Name   *Name          `auto:"value(struct)"`
-	Age    **Age          `auto:"value(struct)"`
-	Arr1   [5]string      `auto:"json([\"1\", \"2\", \"3\", \"4\"])"`
-	Arr2   [2][]string    `auto:"json([[\"1\", \"2\", \"3\", \"4\"], [\"5\", \"6\", \"7\", \"8\"]])"`
-	Arr3   [3]*Name       `auto:"repeat(struct)"`
-	Arr4   [4]int         `auto:"repeat(1)"`
-	Slice1 []string       `auto:"len(5),cap(10),repeat(1)"`
-	Slice2 []string       `auto:"json([\"1\", \"2\", \"3\", \"4\", \"5\"])"`
-	Slice3 []*Name        `auto:"len(1),repeat(struct)"`
-	Slice4 [][2]string    `auto:"json([[\"1\", \"2\"], [\"3\", \"4\"]])"`
-	Map1   map[string]int `auto:"json({\"1\": 1})"`
-	Map2   map[string]int `auto:"len(5),value(key1:1,key2:2,key3:3)"`
-	Dur1   time.Duration  `auto:"3s"`
-	Dur2   *time.Duration `auto:"5h30m15s"`
-	Time1  time.Time      `auto:"2024-12-09T02:20:35Z"`
-	Time2  *time.Time     `auto:"value(2024-12-09 02:20:35),layout(DateTime)"`
-	Rune1  rune           `auto:"rune(1)"`
-	Rune2  rune           `auto:"rune(a)"`
-	Runes1 []rune         `auto:"rune(abc)"`
+type Unsigned struct {
+	Uint   *uint       `auto:"0"`
+	Uint8  **uint8     `auto:"8"`
+	Uint16 ***uint16   `auto:"16"`
+	Uint32 ****uint32  `auto:"32"`
+	Uint64 *****uint64 `auto:"64"`
+}
+
+type Float struct {
+	Float1 float32 `auto:"1.2345"`
+	Float2 float64 `auto:"1.23456789"`
+}
+
+type Complex struct {
+	Complex1 complex64  `auto:"1+2i"`
+	Complex2 complex128 `auto:"3+4i"`
+}
+
+type Test struct {
+	Struct1         *Basic          `auto:"struct"`
+	Struct2         **Signed        `auto:"value(struct)"`
+	Struct3         ***Unsigned     `auto:"value(struct)"`
+	Struct4         ****Float       `auto:"value(struct)"`
+	Struct5         *****Complex    `auto:"value(struct)"`
+	Arr1            [5]string       `auto:"json([\"1\", \"2\", \"3\", \"4\"])"`
+	Arr2            [2][]string     `auto:"json([[\"1\", \"2\", \"3\", \"4\"], [\"5\", \"6\", \"7\", \"8\"]])"`
+	Arr3            [3]*Basic       `auto:"repeat(struct)"`
+	Arr4            [4]int          `auto:"repeat(1)"`
+	Slice1          []string        `auto:"len(5),cap(10),repeat(1)"`
+	Slice2          []string        `auto:"json([\"1\", \"2\", \"3\", \"4\", \"5\"])"`
+	Slice3          []*Basic        `auto:"len(1),repeat(struct)"`
+	Slice4          [][2]string     `auto:"json([[\"1\", \"2\"], [\"3\", \"4\"]])"`
+	Map1            map[string]int  `auto:"json({\"1\": 1})"`
+	Map2            map[string]int  `auto:"len(5),value(key1:1,key2:2,key3:3)"`
+	Duration1       time.Duration   `auto:"3s"`
+	Duration2       *time.Duration  `auto:"value(5h30m15s)"`
+	Time1           time.Time       `auto:"2024-12-09T02:20:35Z"`
+	Time2           *time.Time      `auto:"value(2024-12-09 02:20:35),layout(DateTime)"`
+	Rune1           rune            `auto:"rune(1)"`
+	Rune2           rune            `auto:"rune(a)"`
+	Runes1          []rune          `auto:"rune(abc)"`
+	Byte1           byte            `auto:"byte(1)"`
+	Byte2           byte            `auto:"byte(a)"`
+	Bytes1          []byte          `auto:"byte(abc)"`
+	JSONRawMessage1 json.RawMessage `auto:"json({\"key\": \"value\"})"`
+	JSONRawMessage2 json.RawMessage `auto:"{\"key\": \"value\"}"`
+	Chan1           chan int        `auto:"chan"`
+	Chan2           chan<- int      `auto:"chan(5)"`
+	Chan3           <-chan int      `auto:"chan(10)"`
+	Interface1      any             `auto:"123"`
+	Interface2      any             `auto:"true"`
+	Interface3      any             `auto:"\"abc\""`
+	Interface4      any             `auto:"{\"key\": \"value\"}"`
+	Interface5      any             `auto:"[\"1\", \"2\", \"3\"]"`
 }
 ```
