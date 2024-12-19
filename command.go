@@ -41,10 +41,6 @@ func (c command) value() string {
 		return c.byte()
 	}
 
-	if c.isChannel() {
-		return c.channel()
-	}
-
 	return ""
 }
 
@@ -92,10 +88,6 @@ func (c command) isChannel() bool {
 	return c.isCMD("chan")
 }
 
-func (c command) channel() string {
-	return c.cmd("chan")
-}
-
 func (c command) len() int {
 	i, _ := strconv.Atoi(c.list["len"])
 	return i
@@ -103,6 +95,11 @@ func (c command) len() int {
 
 func (c command) cap() int {
 	i, _ := strconv.Atoi(c.list["cap"])
+	return i
+}
+
+func (c command) buffer() int {
+	i, _ := strconv.Atoi(c.list["chan"])
 	return i
 }
 

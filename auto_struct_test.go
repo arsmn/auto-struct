@@ -49,9 +49,9 @@ type Example struct {
 	Bytes1          []byte          `auto:"byte(abc)"`
 	JSONRawMessage1 json.RawMessage `auto:"json({\"key\": \"value\"})"`
 	JSONRawMessage2 json.RawMessage `auto:"{\"key\": \"value\"}"`
-	Chan1           chan int        `auto:"chan(1)"`
-	Chan2           chan<- int      `auto:"chan(1),cap(5)"`
-	Chan3           <-chan int      `auto:"chan(1),cap(5)"`
+	Chan1           chan int        `auto:"chan"`
+	Chan2           chan<- int      `auto:"chan(5)"`
+	Chan3           <-chan int      `auto:"chan(10)"`
 	Interface1      any             `auto:"123"`
 	Interface2      any             `auto:"true"`
 	Interface3      any             `auto:"\"abc\""`
@@ -151,7 +151,7 @@ func Test_New(t *testing.T) {
 			JSONRawMessage2: json.RawMessage(`{"key": "value"}`),
 			Chan1:           make(chan int),
 			Chan2:           make(chan<- int, 5),
-			Chan3:           make(<-chan int, 5),
+			Chan3:           make(<-chan int, 10),
 			Interface1:      float64(123),
 			Interface2:      true,
 			Interface3:      "abc",

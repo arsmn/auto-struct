@@ -450,7 +450,7 @@ func chanSetter(cfg *config, v reflect.Value, cmd command) error {
 	}
 
 	if cmd.isChannel() {
-		v.Set(reflect.MakeChan(reflect.ChanOf(reflect.BothDir, v.Type().Elem()), cmd.cap()))
+		v.Set(reflect.MakeChan(reflect.ChanOf(reflect.BothDir, v.Type().Elem()), cmd.buffer()))
 	}
 
 	return nil
