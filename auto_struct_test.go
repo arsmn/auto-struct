@@ -25,7 +25,7 @@ type Example struct {
 	Foo             **bool          `auto:"true"`
 	Bar             string          `auto:"bar"`
 	Qux             int8            `auto:"123"`
-	Name            *Name           `auto:"value(struct)"`
+	Name            *Name           `auto:"struct"`
 	Age             **Age           `auto:"value(struct)"`
 	Arr1            [5]string       `auto:"json([\"1\", \"2\", \"3\", \"4\"])"`
 	Arr2            [2][]string     `auto:"json([[\"1\", \"2\", \"3\", \"4\"], [\"5\", \"6\", \"7\", \"8\"]])"`
@@ -49,9 +49,9 @@ type Example struct {
 	Bytes1          []byte          `auto:"byte(abc)"`
 	JSONRawMessage1 json.RawMessage `auto:"json({\"key\": \"value\"})"`
 	JSONRawMessage2 json.RawMessage `auto:"{\"key\": \"value\"}"`
-	Chan1           chan int        `auto:"chan"`
-	Chan2           chan<- int      `auto:"chan,cap(5)"`
-	Chan3           <-chan int      `auto:"chan,cap(5)"`
+	Chan1           chan int        `auto:"chan(1)"`
+	Chan2           chan<- int      `auto:"chan(1),cap(5)"`
+	Chan3           <-chan int      `auto:"chan(1),cap(5)"`
 	Interface1      any             `auto:"123"`
 	Interface2      any             `auto:"true"`
 	Interface3      any             `auto:"\"abc\""`

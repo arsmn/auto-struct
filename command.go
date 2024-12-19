@@ -1,73 +1,124 @@
 package autostruct
 
 import (
-	"fmt"
 	"regexp"
 	"strconv"
-	"strings"
 )
 
-var rx = regexp.MustCompile(`(\w+)(?:\(([^)]*)\))?`)
+var rx = regexp.MustCompile(`(\w+)\((.*?\{.*?\}.*?|[^()]+)\)`)
 
 type command struct {
-	txt, val string
-	len, cap int
-	layout   string
+	list map[string]string
+}
+
+func (c command) isCMD(cmd string) bool {
+	_, ok := c.list[cmd]
+	return ok
+}
+
+func (c command) cmd(cmd string) string {
+	return c.list[cmd]
+}
+
+func (c command) value() string {
+	if c.isCMD("value") {
+		return c.cmd("value")
+	}
+
+	if c.isJSON() {
+		return c.json()
+	}
+
+	if c.isRepeat() {
+		return c.repeat()
+	}
+
+	if c.isRune() {
+		return c.rune()
+	}
+
+	if c.isByte() {
+		return c.byte()
+	}
+
+	if c.isChannel() {
+		return c.channel()
+	}
+
+	return ""
+}
+
+func (c command) layout() string {
+	return c.list["layout"]
+}
+
+func (c command) isValueStruct() bool {
+	return c.value() == "struct"
 }
 
 func (c command) isJSON() bool {
-	return strings.EqualFold(c.txt, "json")
+	return c.isCMD("json")
+}
+
+func (c command) json() string {
+	return c.cmd("json")
 }
 
 func (c command) isRepeat() bool {
-	return strings.EqualFold(c.txt, "repeat")
+	return c.isCMD("repeat")
+}
+
+func (c command) repeat() string {
+	return c.cmd("repeat")
 }
 
 func (c command) isRune() bool {
-	return strings.EqualFold(c.txt, "rune")
+	return c.isCMD("rune")
+}
+
+func (c command) rune() string {
+	return c.cmd("rune")
 }
 
 func (c command) isByte() bool {
-	return strings.EqualFold(c.txt, "byte")
+	return c.isCMD("byte")
 }
 
-func (c command) isChan() bool {
-	return strings.EqualFold(c.txt, "chan")
+func (c command) byte() string {
+	return c.cmd("byte")
 }
 
-func (c command) isValStruct() bool {
-	return strings.EqualFold(c.val, "struct")
+func (c command) isChannel() bool {
+	return c.isCMD("chan")
 }
 
-func parseTag(tag string) (command, error) {
-	cmd := command{
-		val: tag,
-	}
+func (c command) channel() string {
+	return c.cmd("chan")
+}
 
-	for _, match := range rx.FindAllStringSubmatch(tag, -1) {
-		if len(match) == 3 {
-			switch match[1] {
-			case "value", "json", "repeat", "rune", "byte", "chan":
-				if cmd.txt != "" {
-					return command{}, fmt.Errorf("more than one main command is detected")
-				}
+func (c command) len() int {
+	i, _ := strconv.Atoi(c.list["len"])
+	return i
+}
 
-				cmd.txt, cmd.val = match[1], match[2]
-			case "len":
-				l, _ := strconv.Atoi(match[2])
-				cmd.len = l
-			case "cap":
-				l, _ := strconv.Atoi(match[2])
-				cmd.cap = l
-			case "layout":
-				cmd.layout = match[2]
+func (c command) cap() int {
+	i, _ := strconv.Atoi(c.list["cap"])
+	return i
+}
+
+func parseTag(tag string) command {
+	list := make(map[string]string)
+
+	matches := rx.FindAllStringSubmatch(tag, -1)
+	if len(matches) == 0 {
+		list["value"] = tag
+	} else {
+		for _, match := range matches {
+			if len(match) == 3 {
+				list[match[1]] = match[2]
 			}
 		}
 	}
 
-	if cmd.cap < cmd.len {
-		cmd.cap = cmd.len
-	}
-
-	return cmd, nil
+	return command{list: list}
 }
