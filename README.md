@@ -31,13 +31,13 @@ person := autostruct.New[Person]()
 Using a pre-defined variable (panics on error):
 ```go
 var p Person
-person := autostruct.MustSet(p)
+person := autostruct.MustSet(&p)
 ```
 
 Using a pre-defined variable (returns error):
 ```go
 var p Person
-person, err := autostruct.Set(p)
+person, err := autostruct.Set(&p)
 if err != nil {
 	// handle error
 }
